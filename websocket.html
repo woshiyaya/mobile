@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>测试websocket</title>
+  <style>
+    .main {
+      height: 400px;
+      border: 2px solid red
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 呈现聊天内容区域 -->
+  <div id="main" class='main'>
+
+  </div>
+
+  <!-- 设置聊天内容的输入框 -->
+  <input type="text" id="myContent">
+
+  <!-- 客户端与服务器端建立连接 -->
+  <button onclick="openWs()">打开连接</button>
+
+  <!-- 发送消息 -->
+  <button onclick="sendMessage()">发送消息</button>
+  
+  <!-- 关闭连接 -->
+  <button onclick="closeWs()">关闭连接</button>
+  <script>
+    var isOpen = false // 是否打开了连接
+    var msgDom = document.getElementById("main") // 获取聊天框的dom元素
+    var ws = null
+
+    // 发送消息逻辑
+    var sendMessage = function () {
+      var dom = document.getElementById("myContent")
+      //   只有当消息不为空 并且 已经连接的情况下 才去发送消息
+      if (dom.value && isOpen) {
+        //  如果存在 发送消息 给服务器发消息
+        // 客户端向服务端发送数据，调用 send()方法事件(服务器端  onsend)
+        // 服务器端接收到消息后，也会反向与客户端联系，并传递信息
+        ws.send(dom.value) 
+
+        // 客户端自己把输入框的信息追加到页面显示
+        msgDom.innerHTML = msgDom.innerHTML + `<div>
+             <span>我说:</span>
+             ${dom.value}
+          </div>`
+        // 清空输入框内容的内容
+        dom.value = ''
+      }
+    }
+    
+    //  关闭连接
+    var closeWs = function () {
+      ws.close() // 关闭连接，是要调用服务器端的onclose事件的，实现关闭
+      // 关闭成功，服务器端也会调用客户端的事件(onclose)，告知结果
+    }
+
+    // 打开连接，与服务端联系
+    var openWs = function () {
+      // 创建连接  尝试拨号 =>  wss://echo.websocket.org
+      // wss://echo.websocket.org 是官网提供的测试连接服务器端地址
+      ws = new WebSocket("wss://echo.websocket.org"); // 初始化一个websocket对象
+      // 同时会建立连接 成功后会向onopen事件进行回调处理
+      // 当前 客户端 与 服务器端 建立连接
+
+      // ws是websocket对象
+      // 客户端 与 服务器端实现通信的原理，是"事件机制"
+      // 互相之间发送消息，就是调用对方的事件执行而已
+      // 事件声明:ws.onXXX = function   // 事件前边有on标志
+      // 事件调用:ws.xxx()
+      // onopen、onmessage、onclose 都是服务器端固定调用的名字，不要更改
+      
+
+      // 如下都是客户端声明好的websocket事件，等待着服务器来调用
+      // 【非必须设置】
+      ws.onopen = function (evt) {
+        console.log(" 与服务建立连接成功 ...");
+        isOpen = true // 建立成功 就将状态设置true
+      };
+
+      // 接消息  服务器  => 客户端 发消息
+      // 把客户端传递给 服务器端 的 信息 又回传回来了
+      // 必须设置，以便“服务器向客户端”发送数据
+      // onmessage是一个事件，是服务器端调用
+      ws.onmessage = function (event) {
+        // event.data固定代表是服务器端回来的数据
+        console.log("服务器过来的消息: " + event.data);
+        // 把服务器过来的数据信息放到页面的div里边显示
+        msgDom.innerHTML = msgDom.innerHTML + `<div>
+              <span>服务器说:</span>
+              ${event.data}
+            </div>`
+      };
+      
+      // 关闭成功
+      // 【非必须的】
+      ws.onclose = function (evt) {
+        console.log("连接关闭");
+        isOpen = false // 将状态设置为 false
+      };
+    }
+  </script>
+</body>
+
+</html>
